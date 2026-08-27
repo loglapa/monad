@@ -21,6 +21,11 @@ set(MONAD_NEXT_amsterdam_excluded_tests
   "BlockchainTests.for_monad_next/amsterdam/eip7843_slotnum/*"
   "BlockchainTests.for_monad_next/amsterdam/eip7708_eth_transfer_logs/*"
   "BlockchainTests.for_monad_next/amsterdam/eip8024_dupn_swapn_exchange/*"
+  # all_opcodes asserts 0xE6/E7/E8 are undefined, which EIP-8024 defines at
+  # Amsterdam. Unlike the wildcard above it is not under the EIP's own
+  # directory, so it needs naming separately. Drop it when a bundle generated
+  # against a spec that has 8024 is pinned.
+  "BlockchainTests.for_monad_next/frontier/opcodes/all_opcodes/all_opcodes.json"
   # Test contains a EIP-4844 blob which is disabled on Monad
   "BlockchainTests.for_monad_next/amsterdam/eip7981_increase_access_list_cost/transaction_validity/transactions_without_access_list.json"
 )
