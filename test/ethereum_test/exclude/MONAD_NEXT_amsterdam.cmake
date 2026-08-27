@@ -23,4 +23,27 @@ set(MONAD_NEXT_amsterdam_excluded_tests
   "BlockchainTests.for_monad_next/amsterdam/eip8024_dupn_swapn_exchange/*"
   # Test contains a EIP-4844 blob which is disabled on Monad
   "BlockchainTests.for_monad_next/amsterdam/eip7981_increase_access_list_cost/transaction_validity/transactions_without_access_list.json"
+  # The pinned bundle is generated against a spec that does not implement
+  # EIP-8246, which this commit does: upstream carries an EIP8246 fork class and
+  # a selfdestruct_no_burn test directory, but the class is a stub and no
+  # fixtures are generated from it. So these selfdestruct expectations still
+  # encode the pre-8246 deletion and fail on a postState missing the
+  # balance-only account 8246 now preserves. Drop them when a bundle generated
+  # against a spec that really has 8246 is pinned.
+  #
+  # The mip4_checkreservebalance entry is coarser than the rest: gtest filters
+  # per file, and that file's cases are mostly selfdestruct_False ones 8246 does
+  # not touch, so they are suppressed as collateral.
+  #
+  # Names are fs::relative(path, blockchain_tests), so every one begins
+  # for_monad_next/.
+  "BlockchainTests.for_monad_next/cancun/eip6780_selfdestruct/selfdestruct/create_selfdestruct_same_tx.json"
+  "BlockchainTests.for_monad_next/cancun/eip6780_selfdestruct/selfdestruct/recreate_self_destructed_contract_different_txs.json"
+  "BlockchainTests.for_monad_next/cancun/eip6780_selfdestruct/selfdestruct/self_destructing_initcode.json"
+  "BlockchainTests.for_monad_next/cancun/eip6780_selfdestruct/selfdestruct_revert/selfdestruct_created_in_same_tx_with_revert.json"
+  "BlockchainTests.for_monad_next/frontier/create/create_suicide_during_init/create_suicide_during_transaction_create.json"
+  "BlockchainTests.for_monad_next/monad_nine/mip4_checkreservebalance/transfers/contract_unrestricted_within_initcode.json"
+  "BlockchainTests.for_monad_next/paris/security/selfdestruct_balance_bug/tx_selfdestruct_balance_bug.json"
+  "BlockchainTests.for_monad_next/tangerine_whistle/eip150_operation_gas_costs/eip150_selfdestruct/initcode_selfdestruct_to_self.json"
+  "BlockchainTests.for_monad_next/tangerine_whistle/eip150_operation_gas_costs/eip150_selfdestruct/selfdestruct_to_self.json"
 )
