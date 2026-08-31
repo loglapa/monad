@@ -344,6 +344,27 @@ try {
     TrieDb triedb{
         raw_db,
         /*enable_multiblock_cache=*/true};
+
+    // Dual-timeline: open the secondary alongside the primary. The primary
+    // always owns the latest state; a secondary is optional.
+    // runloop_monad: writes every block to every open db.
+    // runloop_monad_ethblocks:
+    //             before mip8 fork: writes every block to every open db
+    //             after mip8 fork: asserts primary db must be page-encoded,
+    //             writes to primary db only, freeze secondary slot db if
+    //             secondary db is active.
+    std::optional<mpt::Db> secondary_raw_db;
+    std::optional<TrieDb> secondary_db;
+    if (!db_in_memory &&
+        raw_db.timeline_active(monad::mpt::timeline_id::secondary)) {
+        secondary_raw_db = raw_db.open_secondary_timeline();
+        MONAD_ASSERT(secondary_raw_db.has_value());
+        secondary_db.emplace(*secondary_raw_db);
+        MONAD_ASSERT(
+            secondary_db->is_page_encoded() != triedb.is_page_encoded(),
+            "dual-timeline dbs must pair one slot and one page encoding");
+    }
+
     // Note: in memory db block number is always zero
     uint64_t const init_block_num = [&] {
         if (!snapshot.empty()) {
@@ -415,7 +436,7 @@ try {
     if (!db_in_memory) {
         mpt::AsyncIOContext io_ctx{mpt::ReadOnlyOnDiskDbConfig{
             .sq_thread_cpu = ro_sq_thread_cpu, .dbname_paths = dbname_paths}};
-        mpt::Db rodb{io_ctx};
+        mpt::Db rodb{io_ctx, monad::mpt::timeline_id::primary};
         initialized_headers_from_triedb = init_block_hash_buffer_from_triedb(
             rodb, start_block_num, block_hash_buffer);
     }
@@ -480,19 +501,6 @@ try {
         case CHAIN_CONFIG_MONAD_DEVNET:
         case CHAIN_CONFIG_MONAD_TESTNET:
         case CHAIN_CONFIG_MONAD_MAINNET: {
-            std::optional<mpt::Db> secondary_raw_db;
-            std::optional<TrieDb> secondary_db;
-            if (raw_db.timeline_active(monad::mpt::timeline_id::secondary)) {
-                secondary_raw_db = raw_db.open_secondary_timeline();
-                MONAD_ASSERT(secondary_raw_db.has_value());
-                MONAD_ASSERT(
-                    secondary_db->is_page_encoded(),
-                    "secondary timeline must be page-encoded");
-                MONAD_ASSERT(
-                    !db.is_page_encoded(),
-                    "primary must be slot-encoded when the secondary "
-                    "timeline is active");
-            }
             if (as_eth_blocks) {
                 return runloop_monad_ethblocks(
                     dynamic_cast<MonadChain const &>(*chain),
