@@ -205,8 +205,6 @@ public:
 
     uint64_t get_latest_version() const;
     uint64_t get_earliest_version() const;
-    // True when this db's timeline has a root for `version` on disk.
-    bool version_is_valid_ondisk(uint64_t version) const;
     uint64_t get_history_length() const;
     // This function moves trie from source to destination version in db
     // history. Only the RWDb can call this API for state sync purposes.

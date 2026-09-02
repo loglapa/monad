@@ -357,7 +357,7 @@ void UpdateAux::rewind_to_version(uint64_t const version)
             cutoff_fast = candidate;
         }
     };
-    // Range-checked lookup: a primary frozen below `version` yields
+    // Range-checked lookup: a `version` outside the primary's range yields
     // INVALID_OFFSET (raw ring indexing would return a stale slot).
     consider(post_root_fast_offset_(
         main, metadata_ctx_->get_root_offset_at_version(version)));

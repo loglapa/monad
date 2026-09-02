@@ -424,21 +424,22 @@ namespace
     }
 
     // -------------------------------------------------------------------
-    // Test: reopening with rewind_to_latest_finalized when the primary is
-    // frozen behind the secondary (the archive shape where the primary
-    // stops committing at the mip-8 cutoff). The rewind must accept a
-    // finalized version only the secondary has, rewind the secondary's
-    // unfinalized tail, and leave the primary untouched.
+    // Test: reopening with rewind_to_latest_finalized after the offline
+    // promote, when the old slot primary is a frozen secondary behind the
+    // page primary (the archive shape past the mip-8 cutoff). The rewind
+    // must trim the primary's unfinalized tail and leave the frozen
+    // secondary untouched.
     // -------------------------------------------------------------------
-    TEST_F(DualTimelineFixture, rewind_to_finalized_with_frozen_primary)
+    TEST_F(DualTimelineFixture, rewind_to_finalized_with_frozen_secondary)
     {
         auto const pk = 0x1111111111111111_bytes;
         for (uint64_t v = 0; v <= 4; v++) {
             primary_root = upsert_kv(primary_root, pk, pk, v);
         }
 
-        // The secondary advances to 7 while the primary stays frozen at 4;
-        // 6 is the last finalized version.
+        // The secondary advances to 7 while the old primary stays at 4; 6
+        // is the last finalized version. Promote swaps the roles, so the
+        // frozen timeline becomes the secondary.
         activate_secondary();
         auto const sk = 0xAAAAAAAAAAAAAAAA_bytes;
         for (uint64_t v = 5; v <= 7; v++) {
@@ -446,10 +447,10 @@ namespace
                 upsert_kv(secondary_root, sk, sk, v, timeline_id::secondary);
         }
         db.update_finalized_version(6);
+        promote_secondary();
 
         // Reopen the primary with rewind_to_latest_finalized, as production
         // does on restart.
-        secondary_db.reset();
         {
             Db const expired = std::move(db);
         }
@@ -461,24 +462,23 @@ namespace
             std::make_unique<StateMachineAlwaysMerkle>()));
 
         EXPECT_EQ(db.get_latest_finalized_version(), 6);
-        // The primary is untouched; the secondary's unfinalized version 7
-        // is rewound away.
-        EXPECT_EQ(db.get_latest_version(), 4);
-        EXPECT_EQ(secondary_db->get_latest_version(), 6);
+        // The primary's unfinalized version 7 is rewound away; the frozen
+        // secondary keeps its tip.
+        EXPECT_EQ(db.get_latest_version(), 6);
+        EXPECT_EQ(secondary_db->get_latest_version(), 4);
 
         // Data on both timelines stays readable at their tips.
-        primary_root = db.load_root_for_version(4);
-        ASSERT_NE(primary_root, nullptr);
-        auto const pres = db_get(db, primary_root, NibblesView{pk}, 4);
+        auto root = db.load_root_for_version(6);
+        ASSERT_NE(root, nullptr);
+        auto const pres = db_get(db, root, NibblesView{sk}, 6);
         ASSERT_TRUE(pres.has_value());
-        EXPECT_EQ(pres.value(), monad::byte_string{pk});
+        EXPECT_EQ(pres.value(), monad::byte_string{sk});
 
-        secondary_root = secondary_db->load_root_for_version(6);
-        ASSERT_NE(secondary_root, nullptr);
-        auto const sres =
-            db_get(*secondary_db, secondary_root, NibblesView{sk}, 6);
+        root = secondary_db->load_root_for_version(4);
+        ASSERT_NE(root, nullptr);
+        auto const sres = db_get(*secondary_db, root, NibblesView{pk}, 4);
         ASSERT_TRUE(sres.has_value());
-        EXPECT_EQ(sres.value(), monad::byte_string{sk});
+        EXPECT_EQ(sres.value(), monad::byte_string{pk});
 
         deactivate_secondary();
     }

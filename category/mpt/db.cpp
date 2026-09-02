@@ -1343,13 +1343,6 @@ uint64_t Db::get_earliest_version() const
     return impl_->aux().metadata_ctx().db_history_min_valid_version(tid());
 }
 
-bool Db::version_is_valid_ondisk(uint64_t const version) const
-{
-    MONAD_ASSERT(impl_);
-    MONAD_ASSERT(is_on_disk());
-    return impl_->aux().metadata_ctx().version_is_valid_ondisk(version, tid());
-}
-
 DbStorageStats Db::get_storage_stats() const
 {
     MONAD_ASSERT(impl_);

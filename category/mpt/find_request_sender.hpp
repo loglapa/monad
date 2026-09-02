@@ -94,8 +94,7 @@ public:
     constexpr find_request_sender(
         UpdateAux &aux, NodeCache &node_cache, AsyncInflightNodes &inflights,
         NodeCursor const root, uint64_t const version, NibblesView const key,
-        bool const return_value,
-        timeline_id const timeline = timeline_id::primary)
+        bool const return_value, timeline_id const timeline)
         : aux_(aux)
         , node_cache_(node_cache)
         , root_(root)
