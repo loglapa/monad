@@ -70,8 +70,17 @@ namespace detail
 
         [[nodiscard]] constexpr value_type *allocate(size_t const n)
         {
+            size_t const used = static_cast<size_t>(p - buffer.data());
+            // This allocator is used while reporting assertion failures, so
+            // invoking MONAD_ASSERT here would recursively capture a backtrace.
+            if (used > buffer.size()) {
+                abort();
+            }
+            size_t const available = buffer.size() - used;
+            if (n > available / sizeof(value_type)) {
+                abort();
+            }
             auto *newp = p + sizeof(value_type) * n;
-            assert(size_t(newp - buffer.data()) <= buffer.size());
             auto *ret = reinterpret_cast<value_type *>(p);
             p = newp;
             return ret;
