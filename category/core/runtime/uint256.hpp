@@ -1060,16 +1060,17 @@ inline uint256_t from_bytes(size_t const n, uint8_t const *src)
     return from_bytes(n, n, src);
 }
 
-constexpr size_t countl_zero(uint256_t const &x)
+[[gnu::always_inline]] constexpr size_t countl_zero(uint256_t const &x) noexcept
 {
-    size_t cnt = 0;
-    for (size_t i = 0; i < uint256_t::num_words; i++) {
-        cnt += static_cast<size_t>(std::countl_zero(x[3 - i]));
-        if (cnt != ((i + 1U) * 64U)) {
-            return cnt;
-        }
-    }
-    return cnt;
+    auto const high_two = x[3] | x[2];
+    auto const high_three = high_two | x[1];
+    size_t const leading_zero_words = static_cast<size_t>(x[3] == 0) +
+                                      static_cast<size_t>(high_two == 0) +
+                                      static_cast<size_t>(high_three == 0);
+    auto const leading_word = x[uint256_t::num_words - leading_zero_words - 1];
+
+    return leading_zero_words * uint256_t::word_num_bits +
+           static_cast<size_t>(std::countl_zero(leading_word));
 }
 
 consteval uint256_t pow2(size_t n)

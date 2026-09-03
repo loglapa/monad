@@ -41,6 +41,12 @@ static_assert(
 static_assert(
     sizeof(uint256_t) == sizeof(::intx::uint256),
     "Size of uint256_t is incompatible with intx");
+static_assert(countl_zero(uint256_t{}) == 256);
+static_assert(countl_zero(uint256_t{1}) == 255);
+static_assert(countl_zero(uint256_t{0, 1}) == 191);
+static_assert(countl_zero(uint256_t{0, 0, 1}) == 127);
+static_assert(countl_zero(uint256_t{0, 0, 0, 1}) == 63);
+static_assert(countl_zero(~uint256_t{0}) == 0);
 
 TEST(uint256, signextend)
 {
@@ -160,6 +166,27 @@ void test_bit_width()
 TEST(uint256, bit_width)
 {
     test_bit_width<255>();
+}
+
+TEST(uint256, countl_zero)
+{
+    ASSERT_EQ(monad::countl_zero(uint256_t{}), 256);
+
+    for (size_t bit = 0; bit < uint256_t::num_bits; ++bit) {
+        EXPECT_EQ(
+            monad::countl_zero(uint256_t{1} << bit),
+            uint256_t::num_bits - bit - 1)
+            << "bit=" << bit;
+    }
+
+    for (size_t n = 0; n < uint256_t::num_bits; ++n) {
+        EXPECT_EQ(monad::countl_zero(~uint256_t{0} >> n), n) << "n=" << n;
+    }
+
+    EXPECT_EQ(monad::countl_zero(uint256_t{0xdeadbeef}), 224);
+    EXPECT_EQ(monad::countl_zero(uint256_t{0xdeadbeef, 1}), 191);
+    EXPECT_EQ(monad::countl_zero(uint256_t{0xdeadbeef, 0, 1}), 127);
+    EXPECT_EQ(monad::countl_zero(uint256_t{0xdeadbeef, 0, 0, 1}), 63);
 }
 
 ::intx::uint256 from_words(std::array<uint64_t, 4> const words)
