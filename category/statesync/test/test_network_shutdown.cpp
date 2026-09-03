@@ -84,6 +84,20 @@ namespace
     };
 }
 
+TEST(StateSyncNetwork, rejects_overlong_socket_path)
+{
+    size_t const max_size =
+        monad_statesync_server_network::max_socket_path_size;
+    std::string const max_path(max_size, 'x');
+    std::string const overlong_path(max_size + 1, 'x');
+
+    EXPECT_NO_THROW(
+        monad_statesync_server_network::validate_socket_path(max_path));
+    EXPECT_THROW(
+        monad_statesync_server_network::validate_socket_path(overlong_path),
+        monad::MonadException);
+}
+
 TEST(StateSyncThread, shutdown_via_jthread_stop_token)
 {
     // Tests production shutdown: request_stop() → stop_callback →

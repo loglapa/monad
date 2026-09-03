@@ -18,6 +18,7 @@
 #include <category/core/byte_string.hpp>
 #include <category/core/config.hpp>
 #include <category/core/log.hpp>
+#include <category/core/monad_exception.hpp>
 #include <category/statesync/statesync_messages.h>
 
 #include <quill/bundled/fmt/ranges.h>
@@ -26,6 +27,7 @@
 #include <array>
 #include <chrono>
 #include <poll.h>
+#include <string_view>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -38,6 +40,16 @@ struct monad_statesync_server_network
     int shutdown_eventfd;
     monad::byte_string obuf;
     std::string path;
+
+    static constexpr size_t max_socket_path_size =
+        sizeof(sockaddr_un{}.sun_path) - 1;
+
+    static void validate_socket_path(std::string_view const path)
+    {
+        MONAD_ASSERT_THROW(
+            path.size() <= max_socket_path_size,
+            "state sync socket path is too long");
+    }
 
     void connect()
     {
@@ -79,6 +91,7 @@ struct monad_statesync_server_network
     monad_statesync_server_network(char const *const path)
         : path{path}
     {
+        validate_socket_path(this->path);
         shutdown_eventfd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
         MONAD_ASSERT_PRINTF(
             shutdown_eventfd >= 0,
